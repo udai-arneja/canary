@@ -1,6 +1,5 @@
 """Tools for the Red Team Agent"""
 from langchain.tools import tool
-from langchain_community.tools import DuckDuckGoSearchRun
 import requests
 from typing import List, Optional
 import sys
@@ -419,7 +418,6 @@ def get_tools() -> List:
         List of tool instances
     """
     tools = [
-        DuckDuckGoSearchRun(),
         scan_website,
         check_endpoint,
         check_admin_endpoints,

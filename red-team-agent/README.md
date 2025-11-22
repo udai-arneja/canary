@@ -106,13 +106,17 @@ Environment variables (loaded from `.env` files):
 
 ## Logging and Reports
 
-Each agent run automatically creates:
-- **JSON Log** (`logs/run_YYYYMMDD_HHMMSS.json`) - Complete execution log with all messages, tool calls, and reasoning
-- **Markdown Report** (`logs/report_YYYYMMDD_HHMMSS.md`) - Human-readable report with:
+Each agent run automatically creates a per-run folder (`logs/run_YYYYMMDD_HHMMSS/`) containing:
+
+- **`run.json`** - Complete execution log with all messages, tool calls, and reasoning
+- **`report.md`** - Human-readable report with:
   - Verification Steps performed
   - Findings discovered
   - Recommendations for fixes
   - Full security assessment
   - Chain of Thought reasoning
+  - **Prompt Version** - Git commit hash and prompt content hash for tracking prompt changes
+
+The report includes prompt versioning information (git commit hash and prompt file hash) to track which version of the prompts was used for each run.
 
 Reports are saved in the `logs/` directory within the `red-team-agent` folder.

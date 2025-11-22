@@ -1,10 +1,59 @@
 """Logging and report generation for Red Team Agent"""
 import json
 import os
+import subprocess
+import hashlib
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 import re
+import sys
+
+
+def get_git_commit_hash() -> Optional[str]:
+    """Get the current git commit hash (short version)"""
+    try:
+        # Try to get commit hash from git
+        result = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True,
+            text=True,
+            cwd=Path(__file__).parent.parent,
+            timeout=2
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
+        pass
+    return None
+
+
+def get_prompt_version() -> Dict[str, str]:
+    """Get prompt version information (git commit + content hash)"""
+    prompt_version = {
+        "git_commit": None,
+        "prompt_hash": None,
+        "prompt_file": None
+    }
+    
+    # Get git commit hash
+    commit_hash = get_git_commit_hash()
+    if commit_hash:
+        prompt_version["git_commit"] = commit_hash
+    
+    # Calculate hash of prompt content
+    try:
+        prompt_file = Path(__file__).parent / "prompts.py"
+        if prompt_file.exists():
+            prompt_version["prompt_file"] = str(prompt_file)
+            with open(prompt_file, 'rb') as f:
+                content = f.read()
+                prompt_hash = hashlib.sha256(content).hexdigest()[:12]
+                prompt_version["prompt_hash"] = prompt_hash
+    except Exception:
+        pass
+    
+    return prompt_version
 
 
 class AgentLogger:
@@ -25,12 +74,18 @@ class AgentLogger:
         self.output_dir.mkdir(exist_ok=True, parents=True)
         
         self.run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.run_dir = None  # Will be set when saving
+        
+        # Get prompt version info
+        prompt_version = get_prompt_version()
+        
         self.log_data = {
             "run_id": self.run_id,
             "timestamp": datetime.now().isoformat(),
             "website_url": None,
             "model": None,
             "task": None,
+            "prompt_version": prompt_version,
             "messages": [],
             "tool_calls": [],
             "reasoning_steps": [],
@@ -117,14 +172,18 @@ class AgentLogger:
             self.log_data["structured_report"]["recommendations"] = recommendations
     
     def save_report(self) -> Path:
-        """Save the report to files"""
+        """Save the report to files - creates a folder per run"""
+        # Create run-specific folder
+        self.run_dir = self.output_dir / f"run_{self.run_id}"
+        self.run_dir.mkdir(exist_ok=True, parents=True)
+        
         # Save full JSON log
-        json_file = self.output_dir / f"run_{self.run_id}.json"
+        json_file = self.run_dir / "run.json"
         with open(json_file, 'w', encoding='utf-8') as f:
             json.dump(self.log_data, f, indent=2, ensure_ascii=False)
         
         # Save human-readable report
-        report_file = self.output_dir / f"report_{self.run_id}.md"
+        report_file = self.run_dir / "report.md"
         with open(report_file, 'w', encoding='utf-8') as f:
             f.write(self._generate_markdown_report())
         
@@ -134,7 +193,23 @@ class AgentLogger:
         """Generate a concise markdown report from the log data"""
         report = []
         report.append("# Security Assessment Report")
-        report.append(f"\n**URL:** {self.log_data['website_url']} | **Model:** {self.log_data['model']} | **Run:** {self.log_data['run_id']}")
+        
+        # Header with metadata
+        url = self.log_data.get('website_url', 'N/A')
+        model = self.log_data.get('model', 'N/A')
+        run_id = self.log_data.get('run_id', 'N/A')
+        report.append(f"\n**URL:** {url} | **Model:** {model} | **Run:** {run_id}")
+        
+        # Prompt version info
+        prompt_version = self.log_data.get('prompt_version', {})
+        version_parts = []
+        if prompt_version.get('git_commit'):
+            version_parts.append(f"Git: {prompt_version['git_commit']}")
+        if prompt_version.get('prompt_hash'):
+            version_parts.append(f"Prompt Hash: {prompt_version['prompt_hash']}")
+        if version_parts:
+            report.append(f"\n**Prompt Version:** {' | '.join(version_parts)}")
+        
         report.append("\n---\n")
         
         # Verification Steps (Brief)

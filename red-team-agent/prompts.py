@@ -10,7 +10,6 @@ Available tool categories:
 - HTTP Tools: scan_website, check_endpoint, check_admin_endpoints (for API/reconnaissance)
 - Browser Tools: navigate_page, take_screenshot, check_page_content (for visual/rendered content)
 - Browser Interaction: browser_interact (navigate, click, fill, extract, screenshot - Playwright/Browser-use powered)
-- Search: DuckDuckGo search (for vulnerability research)
 
 Required steps:
 1. First, use scan_website to check basic information and headers
