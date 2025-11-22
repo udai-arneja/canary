@@ -1,0 +1,17 @@
+FROM python:3.11-slim
+
+WORKDIR /app/backend
+
+# Install Python dependencies
+COPY dashboard/backend/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy backend code
+COPY dashboard/backend/ ./
+
+# Expose port
+EXPOSE 8000
+
+# Run backend (from /app/backend, so app.main is the correct path)
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
