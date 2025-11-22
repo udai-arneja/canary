@@ -103,6 +103,47 @@ npm install
 npm run dev
 ```
 
+## Integration with Deterministic Websites
+
+Your deterministic websites should report attacks to the dashboard via the API. There are two ways to do this:
+
+### Option 1: Use the Attack Client Library (Recommended)
+
+```python
+from dashboard.backend.app.attack_client import report_attack
+
+# When an attack is detected
+report_attack(
+    website_url="https://your-honeypot.example.com",
+    vulnerability_type="SQL Injection",
+    attack_vector="POST /api/login",
+    success=False,  # or True if attack succeeded
+    payload="' OR '1'='1",
+    source_ip=request.remote_addr,
+    user_agent=request.headers.get('User-Agent'),
+    response_code=400
+)
+```
+
+### Option 2: Direct HTTP POST
+
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8000/api/attacks",
+    json={
+        "website_url": "https://your-honeypot.example.com",
+        "vulnerability_type": "SQL Injection",
+        "attack_vector": "POST /api/login",
+        "success": False,
+        "source_ip": "192.168.1.100"
+    }
+)
+```
+
+See `deterministic-websites/example_attack_reporting.py` for a complete example.
+
 ## API Endpoints
 
 ### POST `/api/attacks`
